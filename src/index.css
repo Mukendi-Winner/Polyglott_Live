@@ -1,0 +1,42 @@
+:root {
+  font-family:
+    'Sora',
+    'Poppins',
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #f7f8fb;
+  background:
+    radial-gradient(circle at top, rgba(58, 85, 255, 0.14), transparent 34%),
+    #12141d;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #12141d;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100svh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100svh;
+}
