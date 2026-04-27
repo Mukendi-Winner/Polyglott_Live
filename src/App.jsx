@@ -195,6 +195,12 @@ function pcm16ToAudioBuffer(audioContext, base64Audio) {
 }
 
 function getLiveSocketUrl() {
+  const configuredUrl = import.meta.env.VITE_LIVE_WS_URL?.trim()
+
+  if (configuredUrl) {
+    return configuredUrl
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/live`
 }
@@ -218,6 +224,7 @@ function InterpreterScreen({ onBack }) {
   const nextPlaybackTimeRef = useRef(0)
   const sessionReadyResolverRef = useRef(null)
   const sessionReadyRejecterRef = useRef(null)
+  const liveSocketUrl = useMemo(() => getLiveSocketUrl(), [])
 
   const areLanguagesSelected = Boolean(inputLanguage && destinationLanguage)
 
@@ -228,6 +235,10 @@ function InterpreterScreen({ onBack }) {
 
     return status
   }, [error, status])
+
+  useEffect(() => {
+    console.log('Resolved live socket URL:', liveSocketUrl)
+  }, [liveSocketUrl])
 
   const stopListening = (options = {}) => {
     const { closeSocket = true, navigateHome = false } = options
@@ -618,6 +629,7 @@ function InterpreterScreen({ onBack }) {
           </button>
 
           <p className={`status-text ${error ? 'is-error' : ''}`}>{statusText}</p>
+          <p className="debug-text">Socket: {liveSocketUrl}</p>
         </div>
 
         <div

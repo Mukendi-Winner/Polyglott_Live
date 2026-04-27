@@ -5,9 +5,9 @@ Polyglott Live is a microphone translator built with React, Vite, and the Gemini
 The flow is simple:
 
 1. Open the interpreter screen with `Commencer`
-2. Choose a destination language
+2. Choose the input and destination languages
 3. Press the mic button and speak
-4. Gemini detects the spoken language and answers back as audio in the selected destination language
+4. Gemini answers back as audio in the selected destination language
 
 ## Project structure
 
@@ -32,9 +32,40 @@ During development, Vite proxies `/api` and `/live` to `http://localhost:3001`.
 
 Default Gemini Live model:
 
-- `gemini-3-flash-preview`
+- `gemini-3.1-flash-live-preview`
 
 ## Notes
 
 - The backend opens one Gemini Live session per connected browser client.
 - The destination language list is currently fixed to 10 common languages.
+
+## Deploy
+
+### Netlify frontend
+
+Deploy the `Polyglott` folder as the frontend project.
+
+- Base directory: `Polyglott`
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+Set this environment variable in Netlify:
+
+- `VITE_LIVE_WS_URL=wss://your-render-service.onrender.com/live`
+
+This is the key production change. Local development works through the Vite proxy, but a Netlify-hosted frontend must connect directly to the Render backend over `wss`.
+
+### Render backend
+
+Deploy the `Polyglott/backend` folder as a Render Web Service.
+
+- Root directory: `Polyglott/backend`
+- Build command: `npm install`
+- Start command: `npm start`
+
+Set these environment variables in Render:
+
+- `GEMINI_API_KEY=...`
+- `GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview`
+
+The backend already reads `process.env.PORT`, which matches Render's web service requirements.

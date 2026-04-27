@@ -223,6 +223,16 @@
   color: #ffb5bf;
 }
 
+.debug-text {
+  margin: 0;
+  max-width: 340px;
+  color: rgba(213, 218, 236, 0.72);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-align: center;
+  word-break: break-word;
+}
+
 .wave-panel {
   position: absolute;
   inset-inline: 0;
