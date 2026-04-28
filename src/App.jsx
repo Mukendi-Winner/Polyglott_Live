@@ -4,26 +4,34 @@ import './App.css'
 const DESTINATION_LANGUAGES = [
   { value: 'English', label: 'English' },
   { value: 'French', label: 'Francais' },
-  { value: 'Spanish', label: 'Spanish' },
-  { value: 'Portuguese', label: 'Portuguese' },
-  { value: 'German', label: 'German' },
-  { value: 'Italian', label: 'Italian' },
-  { value: 'Arabic', label: 'Arabic' },
-  { value: 'Mandarin Chinese', label: 'Mandarin Chinese' },
-  { value: 'Japanese', label: 'Japanese' },
-  { value: 'Korean', label: 'Korean' },
+  { value: 'Spanish', label: 'Espagnol' },
+  { value: 'Portuguese', label: 'Portugais' },
+  { value: 'German', label: 'Allemand' },
+  { value: 'Italian', label: 'Italien' },
+  { value: 'Arabic', label: 'Arabe' },
+  { value: 'Mandarin Chinese', label: 'Chinois mandarin' },
+  { value: 'Japanese', label: 'Japonais' },
+  { value: 'Korean', label: 'Coreen' },
 ]
 
 function getIdleStatus(inputLanguage, destinationLanguage) {
   if (inputLanguage && destinationLanguage) {
-    return `Ready to translate from ${inputLanguage} to ${destinationLanguage}.`
+    return `Pret a interpreter entre ${inputLanguage} et ${destinationLanguage}.`
   }
 
   if (inputLanguage || destinationLanguage) {
-    return 'Select both the input and destination languages before speaking.'
+    return 'Selectionnez la langue d entree et la langue de destination avant de parler.'
   }
 
-  return 'Select the input and destination languages before speaking.'
+  return 'Selectionnez la langue d entree et la langue de destination avant de parler.'
+}
+
+function getListeningStatus(inputLanguage, destinationLanguage) {
+  if (!inputLanguage || !destinationLanguage) {
+    return 'Ecoute en cours.'
+  }
+
+  return `Ecoute en cours. Polyglott traduira entre ${inputLanguage} et ${destinationLanguage}.`
 }
 
 function WelcomeScreen({ onStart }) {
@@ -151,7 +159,7 @@ function waitForSocketOpen(socket) {
 
     const handleError = () => {
       cleanup()
-      reject(new Error('Unable to connect to the Polyglott backend.'))
+      reject(new Error('Impossible de se connecter au backend de Polyglott.'))
     }
 
     const cleanup = () => {
@@ -235,10 +243,6 @@ function InterpreterScreen({ onBack }) {
 
     return status
   }, [error, status])
-
-  useEffect(() => {
-    console.log('Resolved live socket URL:', liveSocketUrl)
-  }, [liveSocketUrl])
 
   const stopListening = (options = {}) => {
     const { closeSocket = true, navigateHome = false } = options
@@ -362,7 +366,7 @@ function InterpreterScreen({ onBack }) {
         sessionReadyRejecterRef.current = null
       }
 
-      setStatus(`Listening. Polyglott will answer in ${destinationLanguage}.`)
+      setStatus(getListeningStatus(inputLanguage, destinationLanguage))
       return
     }
 
@@ -370,14 +374,14 @@ function InterpreterScreen({ onBack }) {
       try {
         await playAudioChunk(message.data)
       } catch {
-        setError('Audio playback failed while streaming the translation.')
+        setError('La lecture audio a echoue pendant le flux de traduction.')
         stopListening()
       }
       return
     }
 
     if (message.type === 'turn-complete') {
-      setStatus(`Listening. Polyglott will answer in ${destinationLanguage}.`)
+      setStatus(getListeningStatus(inputLanguage, destinationLanguage))
       return
     }
 
@@ -389,13 +393,13 @@ function InterpreterScreen({ onBack }) {
     if (message.type === 'error') {
       if (sessionReadyRejecterRef.current) {
         sessionReadyRejecterRef.current(
-          new Error(message.message || 'The live translation session stopped unexpectedly.'),
+          new Error(message.message || 'La session de traduction en direct s est arretee de maniere inattendue.'),
         )
         sessionReadyResolverRef.current = null
         sessionReadyRejecterRef.current = null
       }
 
-      setError(message.message || 'The live translation session stopped unexpectedly.')
+      setError(message.message || 'La session de traduction en direct s est arretee de maniere inattendue.')
       stopListening()
     }
   }
@@ -405,7 +409,7 @@ function InterpreterScreen({ onBack }) {
       const timeoutId = window.setTimeout(() => {
         sessionReadyResolverRef.current = null
         sessionReadyRejecterRef.current = null
-        reject(new Error('Timed out while waiting for the live session to start.'))
+        reject(new Error('Le delai d attente pour demarrer la session en direct a expire.'))
       }, 15000)
 
       sessionReadyResolverRef.current = () => {
@@ -421,18 +425,18 @@ function InterpreterScreen({ onBack }) {
 
   const startListening = async () => {
     if (!destinationLanguage) {
-      setError('Choose both the input and destination languages before starting the microphone.')
+      setError('Choisissez la langue d entree et la langue de destination avant de demarrer le micro.')
       return
     }
 
     if (!inputLanguage) {
-      setError('Choose both the input and destination languages before starting the microphone.')
+      setError('Choisissez la langue d entree et la langue de destination avant de demarrer le micro.')
       return
     }
 
     setError('')
     setIsConnecting(true)
-    setStatus('Connecting to Polyglott Live...')
+    setStatus('Connexion a Polyglott Live...')
 
     try {
       const socket = new WebSocket(getLiveSocketUrl())
@@ -527,7 +531,7 @@ function InterpreterScreen({ onBack }) {
 
       animate()
     } catch {
-      setError('Unable to start the live translation session.')
+      setError('Impossible de demarrer la session de traduction en direct.')
       stopListening()
     }
   }
@@ -555,11 +559,11 @@ function InterpreterScreen({ onBack }) {
 
   return (
     <main className="app-shell">
-      <section className="interpreter-screen" aria-label="Polyglott live">
+      <section className="interpreter-screen" aria-label="Polyglott Live">
         <header className="interpreter-header">
           <h1>Polyglott Live</h1>
           <div className="language-panel">
-            <p className="language-label">Input language</p>
+            <p className="language-label">Langue d entree</p>
 
             <div className="language-select-wrap">
               <LanguageIcon />
@@ -574,9 +578,9 @@ function InterpreterScreen({ onBack }) {
                   setError('')
                   setStatus(getIdleStatus(nextLanguage, destinationLanguage))
                 }}
-                aria-label="Select input language"
+                aria-label="Selectionner la langue d entree"
               >
-                <option value="">Select a language</option>
+                <option value="">Selectionnez une langue</option>
                 {DESTINATION_LANGUAGES.map((language) => (
                   <option key={`input-${language.value}`} value={language.value}>
                     {language.label}
@@ -587,7 +591,7 @@ function InterpreterScreen({ onBack }) {
               <SelectChevron />
             </div>
 
-            <p className="language-label">Destination language</p>
+            <p className="language-label">Langue de destination</p>
 
             <div className="language-select-wrap">
               <LanguageIcon />
@@ -602,9 +606,9 @@ function InterpreterScreen({ onBack }) {
                   setError('')
                   setStatus(getIdleStatus(inputLanguage, nextLanguage))
                 }}
-                aria-label="Select destination language"
+                aria-label="Selectionner la langue de destination"
               >
-                <option value="">Select a language</option>
+                <option value="">Selectionnez une langue</option>
                 {DESTINATION_LANGUAGES.map((language) => (
                   <option key={language.value} value={language.value}>
                     {language.label}
@@ -622,14 +626,13 @@ function InterpreterScreen({ onBack }) {
             type="button"
             className={`control-button ${isListening ? 'is-active' : ''}`}
             onClick={handleControlClick}
-            aria-label={isListening ? 'Stop live conversation' : 'Start live conversation'}
+            aria-label={isListening ? 'Arreter la conversation en direct' : 'Demarrer la conversation en direct'}
             disabled={!areLanguagesSelected || isConnecting}
           >
             {isListening ? <CloseIcon /> : <MicIcon />}
           </button>
 
           <p className={`status-text ${error ? 'is-error' : ''}`}>{statusText}</p>
-          <p className="debug-text">Socket: {liveSocketUrl}</p>
         </div>
 
         <div

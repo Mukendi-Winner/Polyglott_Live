@@ -12,7 +12,7 @@ const model = process.env.GEMINI_LIVE_MODEL || 'gemini-3.1-flash-live-preview'
 const port = Number(process.env.PORT || 3001)
 
 if (!apiKey) {
-  throw new Error('Missing GEMINI_API_KEY in Polyglott/backend/.env')
+  throw new Error('GEMINI_API_KEY est manquant dans Polyglott/backend/.env')
 }
 
 const app = express()
@@ -35,11 +35,14 @@ function sendJson(socket, payload) {
 
 function createTranslatorInstruction(inputLanguage, destinationLanguage) {
   return `You are Polyglott Live, a speech-to-speech translator.
-The user will speak in ${inputLanguage}.
-Reply only in ${destinationLanguage}.
+You are interpreting a live conversation between exactly two languages: ${inputLanguage} and ${destinationLanguage}.
+For each speaker turn, detect whether the speaker is using ${inputLanguage} or ${destinationLanguage}.
+If the speaker uses ${inputLanguage}, reply only in ${destinationLanguage}.
+If the speaker uses ${destinationLanguage}, reply only in ${inputLanguage}.
 Do not explain the translation.
-Keep the answer natural, concise, and faithful to what the user said.
-If the source speech is already in ${destinationLanguage}, briefly answer in ${destinationLanguage}.`
+Do not answer in the same language you just heard unless the speech is ambiguous and you must ask for clarification.
+Keep the answer natural, concise, and faithful to what the speaker said.
+If the speech is unclear or you cannot tell which of the two languages was spoken, ask a very short clarification question in the most likely target language.`
 }
 
 liveServer.on('connection', (browserSocket) => {
@@ -61,7 +64,7 @@ liveServer.on('connection', (browserSocket) => {
     } catch {
       sendJson(browserSocket, {
         type: 'error',
-        message: 'Invalid message format received by the backend.',
+        message: 'Format de message invalide recu par le backend.',
       })
       return
     }
@@ -77,7 +80,7 @@ liveServer.on('connection', (browserSocket) => {
       if (!inputLanguage || !destinationLanguage) {
         sendJson(browserSocket, {
           type: 'error',
-          message: 'Both input and destination languages are required.',
+          message: 'La langue d entree et la langue de destination sont requises.',
         })
         return
       }
@@ -123,13 +126,13 @@ liveServer.on('connection', (browserSocket) => {
             onerror: (event) => {
               sendJson(browserSocket, {
                 type: 'error',
-                message: event.message || 'Gemini Live returned an error.',
+                message: event.message || 'Gemini Live a retourne une erreur.',
               })
             },
             onclose: (event) => {
               sendJson(browserSocket, {
                 type: 'error',
-                message: event.reason || 'Gemini Live closed the session.',
+                message: event.reason || 'Gemini Live a ferme la session.',
               })
             },
           },
@@ -137,7 +140,7 @@ liveServer.on('connection', (browserSocket) => {
       } catch (error) {
         sendJson(browserSocket, {
           type: 'error',
-          message: error instanceof Error ? error.message : 'Failed to start Gemini Live.',
+          message: error instanceof Error ? error.message : 'Impossible de demarrer Gemini Live.',
         })
       }
 
@@ -147,7 +150,7 @@ liveServer.on('connection', (browserSocket) => {
     if (!geminiSession) {
       sendJson(browserSocket, {
         type: 'error',
-        message: 'The live session is not ready yet.',
+        message: 'La session en direct n est pas encore prete.',
       })
       return
     }
@@ -163,7 +166,7 @@ liveServer.on('connection', (browserSocket) => {
       } catch (error) {
         sendJson(browserSocket, {
           type: 'error',
-          message: error instanceof Error ? error.message : 'Failed to stream audio.',
+          message: error instanceof Error ? error.message : 'Impossible de diffuser l audio.',
         })
       }
     }
@@ -178,6 +181,4 @@ liveServer.on('connection', (browserSocket) => {
   })
 })
 
-server.listen(port, () => {
-  console.log(`Polyglott backend listening on http://localhost:${port}`)
-})
+server.listen(port)

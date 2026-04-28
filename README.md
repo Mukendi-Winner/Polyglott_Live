@@ -7,7 +7,7 @@ The flow is simple:
 1. Open the interpreter screen with `Commencer`
 2. Choose the input and destination languages
 3. Press the mic button and speak
-4. Gemini answers back as audio in the selected destination language
+4. Gemini answers back as audio in the other selected language for each speaker turn
 
 ## Project structure
 
