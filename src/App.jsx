@@ -14,19 +14,28 @@ const DESTINATION_LANGUAGES = [
   { value: 'Korean', label: 'Coreen' },
 ]
 
-function getIdleStatus(inputLanguage, destinationLanguage) {
-  if (inputLanguage && destinationLanguage) {
-    return `Pret a interpreter entre ${inputLanguage} et ${destinationLanguage}.`
+const MODES = {
+  CONVERSATION: 'conversation',
+  INTERACTIVE: 'interactive',
+}
+
+function getIdleStatus(mode, inputLanguage, destinationLanguage) {
+  if (mode === MODES.INTERACTIVE) {
+    return 'Pret a lancer votre traducteur interactif.'
   }
 
-  if (inputLanguage || destinationLanguage) {
-    return 'Selectionnez la langue d entree et la langue de destination avant de parler.'
+  if (inputLanguage && destinationLanguage) {
+    return `Pret a interpreter entre ${inputLanguage} et ${destinationLanguage}.`
   }
 
   return 'Selectionnez la langue d entree et la langue de destination avant de parler.'
 }
 
-function getListeningStatus(inputLanguage, destinationLanguage) {
+function getListeningStatus(mode, inputLanguage, destinationLanguage) {
+  if (mode === MODES.INTERACTIVE) {
+    return 'Ecoute en cours. Posez votre question de traduction librement.'
+  }
+
   if (!inputLanguage || !destinationLanguage) {
     return 'Ecoute en cours.'
   }
@@ -34,10 +43,22 @@ function getListeningStatus(inputLanguage, destinationLanguage) {
   return `Ecoute en cours. Polyglott traduira entre ${inputLanguage} et ${destinationLanguage}.`
 }
 
+function getModeTitle(mode) {
+  return mode === MODES.INTERACTIVE ? 'Traducteur interactif' : 'Mode conversation'
+}
+
+function getModeDescription(mode) {
+  if (mode === MODES.INTERACTIVE) {
+    return 'Demandez une traduction, une aide de prononciation ou un conseil de langue.'
+  }
+
+  return 'Interpretez une conversation en direct entre deux langues.'
+}
+
 function WelcomeScreen({ onStart }) {
   return (
     <main className="app-shell">
-      <section className="welcome-screen" aria-label="Welcome">
+      <section className="welcome-screen" aria-label="Accueil">
         <div className="welcome-copy">
           <p className="welcome-line">Bienvenue</p>
           <p className="welcome-line">Sur</p>
@@ -46,6 +67,51 @@ function WelcomeScreen({ onStart }) {
 
         <button type="button" className="primary-button" onClick={onStart}>
           Commencer
+        </button>
+      </section>
+    </main>
+  )
+}
+
+function ModeSelectionScreen({ onChooseMode, onBack }) {
+  return (
+    <main className="app-shell">
+      <section className="mode-screen" aria-label="Choix du mode">
+        <div className="mode-copy">
+          <p className="mode-eyebrow">Choisissez votre experience</p>
+          <h1>Comment voulez-vous utiliser Polyglott Live ?</h1>
+          <p className="mode-description">
+            Passez rapidement d un mode d interpretation en direct a un mode
+            d accompagnement linguistique plus riche.
+          </p>
+        </div>
+
+        <div className="mode-actions">
+          <button
+            type="button"
+            className="mode-card"
+            onClick={() => onChooseMode(MODES.CONVERSATION)}
+          >
+            <span className="mode-card-title">Mode conversation</span>
+            <span className="mode-card-text">
+              Traduction vocale immediate entre deux personnes et deux langues.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="mode-card"
+            onClick={() => onChooseMode(MODES.INTERACTIVE)}
+          >
+            <span className="mode-card-title">Traducteur interactif</span>
+            <span className="mode-card-text">
+              Traduction, prononciation, explications et conseils de langue.
+            </span>
+          </button>
+        </div>
+
+        <button type="button" className="secondary-button" onClick={onBack}>
+          Retour
         </button>
       </section>
     </main>
@@ -213,12 +279,12 @@ function getLiveSocketUrl() {
   return `${protocol}//${window.location.host}/live`
 }
 
-function InterpreterScreen({ onBack }) {
+function InterpreterScreen({ mode, onBack }) {
   const [inputLanguage, setInputLanguage] = useState('')
   const [destinationLanguage, setDestinationLanguage] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0.08)
-  const [status, setStatus] = useState(getIdleStatus('', ''))
+  const [status, setStatus] = useState(getIdleStatus(mode, '', ''))
   const [error, setError] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
   const inputAudioContextRef = useRef(null)
@@ -233,8 +299,11 @@ function InterpreterScreen({ onBack }) {
   const sessionReadyResolverRef = useRef(null)
   const sessionReadyRejecterRef = useRef(null)
   const liveSocketUrl = useMemo(() => getLiveSocketUrl(), [])
+  const isConversationMode = mode === MODES.CONVERSATION
 
-  const areLanguagesSelected = Boolean(inputLanguage && destinationLanguage)
+  const areLanguagesSelected = isConversationMode
+    ? Boolean(inputLanguage && destinationLanguage)
+    : true
 
   const statusText = useMemo(() => {
     if (error) {
@@ -243,6 +312,10 @@ function InterpreterScreen({ onBack }) {
 
     return status
   }, [error, status])
+
+  useEffect(() => {
+    setStatus(getIdleStatus(mode, inputLanguage, destinationLanguage))
+  }, [mode, inputLanguage, destinationLanguage])
 
   const stopListening = (options = {}) => {
     const { closeSocket = true, navigateHome = false } = options
@@ -288,7 +361,7 @@ function InterpreterScreen({ onBack }) {
     }
 
     if (!error) {
-      setStatus(getIdleStatus(inputLanguage, destinationLanguage))
+      setStatus(getIdleStatus(mode, inputLanguage, destinationLanguage))
     }
 
     if (navigateHome) {
@@ -366,7 +439,7 @@ function InterpreterScreen({ onBack }) {
         sessionReadyRejecterRef.current = null
       }
 
-      setStatus(getListeningStatus(inputLanguage, destinationLanguage))
+      setStatus(getListeningStatus(mode, inputLanguage, destinationLanguage))
       return
     }
 
@@ -381,7 +454,7 @@ function InterpreterScreen({ onBack }) {
     }
 
     if (message.type === 'turn-complete') {
-      setStatus(getListeningStatus(inputLanguage, destinationLanguage))
+      setStatus(getListeningStatus(mode, inputLanguage, destinationLanguage))
       return
     }
 
@@ -393,13 +466,19 @@ function InterpreterScreen({ onBack }) {
     if (message.type === 'error') {
       if (sessionReadyRejecterRef.current) {
         sessionReadyRejecterRef.current(
-          new Error(message.message || 'La session de traduction en direct s est arretee de maniere inattendue.'),
+          new Error(
+            message.message ||
+              'La session de traduction en direct s est arretee de maniere inattendue.',
+          ),
         )
         sessionReadyResolverRef.current = null
         sessionReadyRejecterRef.current = null
       }
 
-      setError(message.message || 'La session de traduction en direct s est arretee de maniere inattendue.')
+      setError(
+        message.message ||
+          'La session de traduction en direct s est arretee de maniere inattendue.',
+      )
       stopListening()
     }
   }
@@ -417,19 +496,19 @@ function InterpreterScreen({ onBack }) {
         resolve()
       }
 
-      sessionReadyRejecterRef.current = (error) => {
+      sessionReadyRejecterRef.current = (nextError) => {
         window.clearTimeout(timeoutId)
-        reject(error)
+        reject(nextError)
       }
     })
 
   const startListening = async () => {
-    if (!destinationLanguage) {
+    if (isConversationMode && !destinationLanguage) {
       setError('Choisissez la langue d entree et la langue de destination avant de demarrer le micro.')
       return
     }
 
-    if (!inputLanguage) {
+    if (isConversationMode && !inputLanguage) {
       setError('Choisissez la langue d entree et la langue de destination avant de demarrer le micro.')
       return
     }
@@ -439,7 +518,7 @@ function InterpreterScreen({ onBack }) {
     setStatus('Connexion a Polyglott Live...')
 
     try {
-      const socket = new WebSocket(getLiveSocketUrl())
+      const socket = new WebSocket(liveSocketUrl)
       socketRef.current = socket
 
       socket.addEventListener('message', handleSocketMessage)
@@ -448,11 +527,9 @@ function InterpreterScreen({ onBack }) {
           socketRef.current = null
         }
 
-        if (isListening || isConnecting) {
-          setIsListening(false)
-          setIsConnecting(false)
-          setAudioLevel(0.08)
-        }
+        setIsListening(false)
+        setIsConnecting(false)
+        setAudioLevel(0.08)
       })
 
       await waitForSocketOpen(socket)
@@ -460,8 +537,9 @@ function InterpreterScreen({ onBack }) {
       socket.send(
         JSON.stringify({
           type: 'start',
-          inputLanguage,
-          destinationLanguage,
+          mode,
+          inputLanguage: isConversationMode ? inputLanguage : undefined,
+          destinationLanguage: isConversationMode ? destinationLanguage : undefined,
         }),
       )
 
@@ -559,66 +637,74 @@ function InterpreterScreen({ onBack }) {
 
   return (
     <main className="app-shell">
-      <section className="interpreter-screen" aria-label="Polyglott Live">
+      <section className="interpreter-screen" aria-label={getModeTitle(mode)}>
         <header className="interpreter-header">
-          <h1>Polyglott Live</h1>
-          <div className="language-panel">
-            <p className="language-label">Langue d entree</p>
-
-            <div className="language-select-wrap">
-              <LanguageIcon />
-
-              <select
-                className="language-select"
-                value={inputLanguage}
-                onChange={(event) => {
-                  const nextLanguage = event.target.value
-
-                  setInputLanguage(nextLanguage)
-                  setError('')
-                  setStatus(getIdleStatus(nextLanguage, destinationLanguage))
-                }}
-                aria-label="Selectionner la langue d entree"
-              >
-                <option value="">Selectionnez une langue</option>
-                {DESTINATION_LANGUAGES.map((language) => (
-                  <option key={`input-${language.value}`} value={language.value}>
-                    {language.label}
-                  </option>
-                ))}
-              </select>
-
-              <SelectChevron />
-            </div>
-
-            <p className="language-label">Langue de destination</p>
-
-            <div className="language-select-wrap">
-              <LanguageIcon />
-
-              <select
-                className="language-select"
-                value={destinationLanguage}
-                onChange={(event) => {
-                  const nextLanguage = event.target.value
-
-                  setDestinationLanguage(nextLanguage)
-                  setError('')
-                  setStatus(getIdleStatus(inputLanguage, nextLanguage))
-                }}
-                aria-label="Selectionner la langue de destination"
-              >
-                <option value="">Selectionnez une langue</option>
-                {DESTINATION_LANGUAGES.map((language) => (
-                  <option key={language.value} value={language.value}>
-                    {language.label}
-                  </option>
-                ))}
-              </select>
-
-              <SelectChevron />
-            </div>
+          <div className="interpreter-heading">
+            <h1>{getModeTitle(mode)}</h1>
+            <p className="mode-description mode-description-inline">
+              {getModeDescription(mode)}
+            </p>
           </div>
+
+          {isConversationMode ? (
+            <div className="language-panel">
+              <p className="language-label">Langue d entree</p>
+
+              <div className="language-select-wrap">
+                <LanguageIcon />
+
+                <select
+                  className="language-select"
+                  value={inputLanguage}
+                  onChange={(event) => {
+                    const nextLanguage = event.target.value
+
+                    setInputLanguage(nextLanguage)
+                    setError('')
+                    setStatus(getIdleStatus(mode, nextLanguage, destinationLanguage))
+                  }}
+                  aria-label="Selectionner la langue d entree"
+                >
+                  <option value="">Selectionnez une langue</option>
+                  {DESTINATION_LANGUAGES.map((language) => (
+                    <option key={`input-${language.value}`} value={language.value}>
+                      {language.label}
+                    </option>
+                  ))}
+                </select>
+
+                <SelectChevron />
+              </div>
+
+              <p className="language-label">Langue de destination</p>
+
+              <div className="language-select-wrap">
+                <LanguageIcon />
+
+                <select
+                  className="language-select"
+                  value={destinationLanguage}
+                  onChange={(event) => {
+                    const nextLanguage = event.target.value
+
+                    setDestinationLanguage(nextLanguage)
+                    setError('')
+                    setStatus(getIdleStatus(mode, inputLanguage, nextLanguage))
+                  }}
+                  aria-label="Selectionner la langue de destination"
+                >
+                  <option value="">Selectionnez une langue</option>
+                  {DESTINATION_LANGUAGES.map((language) => (
+                    <option key={language.value} value={language.value}>
+                      {language.label}
+                    </option>
+                  ))}
+                </select>
+
+                <SelectChevron />
+              </div>
+            </div>
+          ) : null}
         </header>
 
         <div className="interpreter-center">
@@ -626,7 +712,11 @@ function InterpreterScreen({ onBack }) {
             type="button"
             className={`control-button ${isListening ? 'is-active' : ''}`}
             onClick={handleControlClick}
-            aria-label={isListening ? 'Arreter la conversation en direct' : 'Demarrer la conversation en direct'}
+            aria-label={
+              isListening
+                ? 'Arreter la conversation en direct'
+                : 'Demarrer la conversation en direct'
+            }
             disabled={!areLanguagesSelected || isConnecting}
           >
             {isListening ? <CloseIcon /> : <MicIcon />}
@@ -636,7 +726,7 @@ function InterpreterScreen({ onBack }) {
         </div>
 
         <div
-          className={`wave-panel ${isListening ? 'is-listening' : ''}`}
+          className="wave-panel"
           aria-hidden="true"
           style={{
             background: waveBackground,
@@ -649,12 +739,28 @@ function InterpreterScreen({ onBack }) {
 
 function App() {
   const [screen, setScreen] = useState('welcome')
+  const [selectedMode, setSelectedMode] = useState(MODES.CONVERSATION)
+
+  if (screen === 'mode-selection') {
+    return (
+      <ModeSelectionScreen
+        onChooseMode={(mode) => {
+          setSelectedMode(mode)
+          setScreen('interpreter')
+        }}
+        onBack={() => {
+          setScreen('welcome')
+        }}
+      />
+    )
+  }
 
   if (screen === 'interpreter') {
     return (
       <InterpreterScreen
+        mode={selectedMode}
         onBack={() => {
-          setScreen('welcome')
+          setScreen('mode-selection')
         }}
       />
     )
@@ -663,7 +769,7 @@ function App() {
   return (
     <WelcomeScreen
       onStart={() => {
-        setScreen('interpreter')
+        setScreen('mode-selection')
       }}
     />
   )

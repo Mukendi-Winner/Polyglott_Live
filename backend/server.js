@@ -45,6 +45,16 @@ Keep the answer natural, concise, and faithful to what the speaker said.
 If the speech is unclear or you cannot tell which of the two languages was spoken, ask a very short clarification question in the most likely target language.`
 }
 
+function createInteractiveInstruction() {
+  return `You are Polyglott Live, an interactive voice translator and language helper.
+Stay focused only on translation, pronunciation, language learning, wording, vocabulary, grammar, and short cultural context that helps with language use.
+Answer naturally with audio only.
+You may translate what the user says, explain a phrase, suggest a more natural wording, help with pronunciation, or give concise language tips.
+If the user asks about something unrelated to translation or languages, politely say that you are a translation and language assistant and that you can only help with translation, pronunciation, wording, grammar, vocabulary, or language-learning questions.
+Do not switch to unrelated topics.
+Keep the reply clear, useful, and concise unless the user explicitly asks for more detail.`
+}
+
 liveServer.on('connection', (browserSocket) => {
   let geminiSession = null
   let sessionStarted = false
@@ -74,10 +84,11 @@ liveServer.on('connection', (browserSocket) => {
         return
       }
 
+      const mode = payload.mode === 'interactive' ? 'interactive' : 'conversation'
       const inputLanguage = payload.inputLanguage?.trim()
       const destinationLanguage = payload.destinationLanguage?.trim()
 
-      if (!inputLanguage || !destinationLanguage) {
+      if (mode === 'conversation' && (!inputLanguage || !destinationLanguage)) {
         sendJson(browserSocket, {
           type: 'error',
           message: 'La langue d entree et la langue de destination sont requises.',
@@ -90,7 +101,10 @@ liveServer.on('connection', (browserSocket) => {
           model,
           config: {
             responseModalities: [Modality.AUDIO],
-            systemInstruction: createTranslatorInstruction(inputLanguage, destinationLanguage),
+            systemInstruction:
+              mode === 'interactive'
+                ? createInteractiveInstruction()
+                : createTranslatorInstruction(inputLanguage, destinationLanguage),
           },
           callbacks: {
             onopen: () => {
